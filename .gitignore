@@ -1,0 +1,9 @@
+# Local photo catalog, decisions, saved albums, and thumbnails
+/data/
+/backups/
+/vendor/
+*.log
+__pycache__/
+*.py[cod]
+.venv/
+.env
