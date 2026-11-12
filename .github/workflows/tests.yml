@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -18,10 +20,28 @@ jobs:
         run: python3 -m unittest discover -v
       - name: Install Ruff
         run: pip install ruff
+      - name: Detect changed Python files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ -n "$BASE_SHA" ]] && git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            git diff --name-only --diff-filter=ACMR -z "$BASE_SHA" HEAD -- '*.py' > "$RUNNER_TEMP/changed-python"
+          else
+            # New branches and unavailable push bases must not silently skip lint.
+            git ls-files -z -- '*.py' > "$RUNNER_TEMP/changed-python"
+          fi
       - name: Lint changed Python
-        run: ruff check face_settings.py player.py review.py test_review_settings.py
-      - name: Check formatting of new Python
-        run: ruff format --check face_settings.py test_review_settings.py
+        run: |
+          mapfile -d '' -t files < "$RUNNER_TEMP/changed-python"
+          if ((${#files[@]})); then
+            ruff check -- "${files[@]}"
+          fi
+      - name: Check formatting of changed Python
+        run: |
+          mapfile -d '' -t files < "$RUNNER_TEMP/changed-python"
+          if ((${#files[@]})); then
+            ruff format --check -- "${files[@]}"
+          fi
 
   browser:
     runs-on: ubuntu-latest
