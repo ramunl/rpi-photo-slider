@@ -1,0 +1,11 @@
+# Optional local face detection (YuNet 2023mar via OpenCV).
+# Install after requirements.txt, e.g.:
+#   python3 -m pip install -r requirements-faces.txt
+#
+# On the deployed Raspberry Pi (Raspberry Pi OS, arm64) the distro package is
+# the supported runtime and already ships cv2.FaceDetectorYN:
+#   sudo apt-get install python3-opencv
+# The pip wheels below are pinned for desktop development and test runs only;
+# they have not been re-verified against the Pi's architecture (see README.md).
+opencv-python-headless==4.8.1.78
+numpy==1.26.4

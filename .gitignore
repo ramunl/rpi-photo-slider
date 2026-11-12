@@ -7,3 +7,5 @@ __pycache__/
 *.py[cod]
 .venv/
 .env
+# YuNet model is downloaded and pinned on the device, not committed
+/models/faces/*.onnx
