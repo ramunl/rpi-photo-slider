@@ -7,7 +7,7 @@ import platform
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from face_framing import face_frame
@@ -105,7 +105,7 @@ def main(argv=None):
         "model_loading_and_framing": record(framing),
     }
     report = {
-        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "recorded_at": datetime.now(UTC).isoformat(),
         "platform": platform.platform(),
         "python": sys.version,
         "fixture": str(args.fixture),
