@@ -221,7 +221,9 @@ class ReviewHttpTests(unittest.TestCase):
         )
 
     def test_localhost_host_enforcement(self):
-        status, data = self.json("GET", "/api/settings", headers={"Host": "example.com"})
+        status, data = self.json(
+            "GET", "/api/settings", headers={"Host": "example.com"}
+        )
         self.assertEqual(status, 403)
         self.assertIn("error", data)
 
