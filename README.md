@@ -209,8 +209,43 @@ image. The cache contract:
 - Source bytes are re-hashed before and after detection, so content changes are
   caught without trusting stat metadata. The source is read twice for hashing in
   addition to the decode.
-- Detection and cache plumbing are this milestone's contract only. Background
-  preprocessing, UI enablement, and face-centered zoom are later milestones.
+- Playback preparation runs in a single background process. Cache opening,
+  SQLite waits, source hashing, detection, EXIF correction, and resizing all run
+  there; Tk only commits prepared pixels and their framing together.
+
+Milestone 2 adds internal `Playback.settings(enabled=..., zoom_percent=...)`
+controls, defaulting to disabled and 40% (1.4× fit). Settings UI is deferred.
+Automatic framing uses the union of all normalized face boxes, clamps pan at
+image edges, and reduces zoom as needed to retain every face. Manual zoom/reset
+remains persistent across photos and albums and takes precedence over automatic
+framing; effective automatic zoom does not change the manual zoom setting.
+
+Scheduling favors the requested photo, then the next photo in playback order,
+then remaining photos to warm the face cache. Jobs are deduplicated; cached faces
+are reused through the existing source/signature validation. Navigation, album,
+settings, manual controls, and viewport changes invalidate pending work. There
+is one in-flight job, one prepared next frame, and no process-side backlog of
+photos. Background cache-only jobs do not transfer images. Pixel transfer uses
+bounded shared memory (viewport axes capped at 4096), with only small metadata
+on the result queue. Source metadata is checked again before display.
+
+The previous frame stays visible during preparation, and the slideshow timer
+starts when the new frame is displayed. Each job has a five-second deadline,
+including cache access and hashing. A failed/timed-out requested job gets one
+ordinary-framing preparation attempt with its own deadline. Detector errors also
+produce ordinary framing. A displayed fallback is final: late results never
+reframe it. If ordinary preparation also fails, the photo is skipped; after one
+unsuccessful pass through the album playback stops. Hung workers are terminated;
+after three hangs/crashes per service lifetime the worker circuit stays closed
+until service restart. Failures are logged, and shutdown releases the process
+and shared memory. Controls remain available while jobs are pending.
+
+Cold detection cannot promise face framing within a finite deadline. Real
+inference still requires the separately owned model pin above; the current empty
+`MODEL_SHA256` is intentionally unchanged. Deterministic gated-worker tests cover
+scheduling, stale rejection, fallback, and recovery without the model. They do
+not establish Raspberry Pi throughput. Detector/cache redesign and deployment
+validation remain outside this milestone.
 
 Test fixtures live in `tests/fixtures/faces/`; their provenance and licenses are
 documented there. The acceptance tests run real YuNet inference and are skipped
