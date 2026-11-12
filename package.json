@@ -1,0 +1,15 @@
+{
+  "name": "rpi-photo-slider-review",
+  "version": "1.0.0",
+  "private": true,
+  "description": "jsdom browser tests for the local photo review interface",
+  "scripts": {
+    "test": "node --test tests/browser/"
+  },
+  "devDependencies": {
+    "jsdom": "24.1.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

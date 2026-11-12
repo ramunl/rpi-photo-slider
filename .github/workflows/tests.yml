@@ -1,0 +1,36 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install runtime dependencies
+        run: pip install -r requirements.txt
+      - name: Run unit tests
+        run: python3 -m unittest discover -v
+      - name: Install Ruff
+        run: pip install ruff
+      - name: Lint changed Python
+        run: ruff check face_settings.py player.py review.py test_review_settings.py
+      - name: Check formatting of new Python
+        run: ruff format --check face_settings.py test_review_settings.py
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install jsdom
+        run: npm install --no-audit --no-fund
+      - name: Run browser tests
+        run: npm test

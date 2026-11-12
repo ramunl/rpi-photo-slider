@@ -214,11 +214,22 @@ image. The cache contract:
   there; Tk only commits prepared pixels and their framing together.
 
 Milestone 2 adds internal `Playback.settings(enabled=..., zoom_percent=...)`
-controls, defaulting to disabled and 40% (1.4× fit). Settings UI is deferred.
-Automatic framing uses the union of all normalized face boxes, clamps pan at
-image edges, and reduces zoom as needed to retain every face. Manual zoom/reset
-remains persistent across photos and albums and takes precedence over automatic
-framing; effective automatic zoom does not change the manual zoom setting.
+controls, defaulting to disabled and 40% (1.4× fit). Automatic framing uses the
+union of all normalized face boxes, clamps pan at image edges, and reduces zoom
+as needed to retain every face. Manual zoom/reset remains persistent across
+photos and albums and takes precedence over automatic framing; effective
+automatic zoom does not change the manual zoom setting.
+
+Milestone 3 adds persistent, validated settings and the review-page controls.
+The review page has labeled **Detect faces** and **Zoom increase** controls;
+disabling face detection disables the zoom input without discarding its value.
+Saving writes `data/face_settings.json` atomically and then applies the settings
+to the running player over its control socket. The zoom increase must be a finite
+number between 0 and 300 percent; invalid values are rejected without changing
+the saved settings. The player loads the same file at startup, so durable
+settings survive a restart. When the player cannot be reached, the settings are
+still saved for the next start and the review page reports that live application
+failed instead of pretending it succeeded.
 
 Scheduling favors the requested photo, then the next photo in playback order,
 then remaining photos to warm the face cache. Jobs are deduplicated; cached faces
@@ -258,6 +269,17 @@ cd /home/roman/photo-library
 python3 -m unittest discover -v
 python3 -m ruff check face_detector.py face_cache.py test_faces.py test_face_cache.py
 python3 -m ruff format --check face_detector.py face_cache.py test_faces.py test_face_cache.py
+```
+
+Face settings and the review HTTP endpoints are covered by
+`test_review_settings.py` (validation, persistence across restart, invalid
+bodies, player failure, and the localhost Host / same-origin protections). The
+browser controls are covered by the jsdom suite under `tests/browser/`, which
+uses a pinned jsdom version and runs in CI alongside the Python tests:
+
+```sh
+npm install --no-audit --no-fund
+npm test
 ```
 
 Tests cover truncated images, exact and pixel duplicates, date conflicts, manual year overrides, preservation of originals, and the face cache and detector contract. Live checks also exercise the Pi player commands and the local review HTTP endpoints.

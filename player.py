@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import os
 import queue
 import random
@@ -10,13 +11,16 @@ import socket
 import threading
 from pathlib import Path
 
+import face_settings
 from face_framing import fit_photo
+from face_worker import ProcessWorker
 from folders import playlist as folder_playlist
 from folders import summaries as folder_summaries
+from playback import Playback
 
 __all__ = ["fit_photo", "main", "pan_after_drag", "request", "serve"]
-from face_worker import ProcessWorker
-from playback import Playback
+
+LOG = logging.getLogger(__name__)
 
 BASE = Path(__file__).resolve().parent
 SOCKET = (
@@ -140,6 +144,15 @@ def serve(data):
         paint()
 
     playback = Playback(ProcessWorker(data), commit, failed=stop)
+    try:
+        startup_settings = face_settings.load(data)
+    except ValueError as exc:
+        LOG.warning("Ignoring invalid face settings: %s", exc)
+        startup_settings = dict(face_settings.DEFAULTS)
+    playback.settings(
+        enabled=startup_settings["enabled"],
+        zoom_percent=startup_settings["zoom_percent"],
+    )
 
     def show(index):
         nonlocal drag
@@ -296,6 +309,12 @@ def serve(data):
                 state.update(pan_x=0.0, pan_y=0.0)
             playback.manual_frame(state["zoom"], (state["pan_x"], state["pan_y"]))
             return dict(state, message=f"Zoom: {state['zoom']:.0%}")
+        elif action == "settings":
+            settings = face_settings.validate(message)
+            playback.settings(
+                enabled=settings["enabled"], zoom_percent=settings["zoom_percent"]
+            )
+            return dict(state, message="Face settings updated.")
         elif action != "status":
             raise ValueError("Unknown player command")
         return dict(state)
@@ -434,11 +453,14 @@ def main():
             "previous",
             "status",
             "years",
+            "settings",
         ],
     )
     p.add_argument("year", nargs="?")
     p.add_argument("--seconds", type=float, default=8)
     p.add_argument("--shuffle", action="store_true")
+    p.add_argument("--enabled", action="store_true", default=None)
+    p.add_argument("--zoom", type=float, default=None)
     p.add_argument("--data", type=Path, default=BASE / "data")
     args = p.parse_args()
     try:
@@ -451,19 +473,22 @@ def main():
                 or not 1900 <= int(args.year) <= 2100
             ):
                 p.error("start requires a valid year, for example: photos start 2010")
+            message = {
+                "command": args.command,
+                "year": args.year,
+                "seconds": args.seconds,
+                "shuffle": args.shuffle,
+            }
+            if args.command == "settings":
+                if args.enabled is None and args.zoom is None:
+                    p.error("settings requires --enabled and/or --zoom")
+                message = {"command": "settings"}
+                if args.enabled is not None:
+                    message["enabled"] = args.enabled
+                if args.zoom is not None:
+                    message["zoom_percent"] = args.zoom
             print(
-                json.dumps(
-                    request(
-                        {
-                            "command": args.command,
-                            "year": args.year,
-                            "seconds": args.seconds,
-                            "shuffle": args.shuffle,
-                        }
-                    ),
-                    ensure_ascii=False,
-                    indent=2,
-                )
+                json.dumps(request(message), ensure_ascii=False, indent=2)
             )
     except (OSError, RuntimeError) as e:
         p.exit(
