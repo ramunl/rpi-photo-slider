@@ -161,11 +161,68 @@ A future voice-assistant intent such as “show photos from 2010” should valid
 
 Implementation references: [Pillow image decoding](https://pillow.readthedocs.io/en/stable/reference/Image.html), [EXIF orientation handling](https://pillow.readthedocs.io/en/stable/reference/ImageOps.html), and [jpeginfo](https://github.com/tjko/jpeginfo).
 
+## Face detection (optional)
+
+Face detection is optional and fully local; nothing is uploaded. It uses
+OpenCV's YuNet **2023mar** model from the
+[OpenCV Zoo](https://github.com/opencv/opencv_zoo) and stores results in a
+persistent, versioned cache at `data/faces.sqlite3`.
+
+To enable it:
+
+```sh
+cd /home/roman/photo-library
+python3 -m pip install -r requirements-faces.txt
+curl -L -o models/faces/face_detection_yunet_2023mar.onnx \
+  https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx
+python3 face_detector.py --pin models/faces/face_detection_yunet_2023mar.onnx
+```
+
+Copy the printed `MODEL_SHA256 = "..."` line into `face_detector.py`. The model
+file is not committed; it is verified against that pinned SHA-256 on every load.
+On the Raspberry Pi, install the distro runtime instead of the pip wheels:
+
+```sh
+sudo apt-get install python3-opencv
+```
+
+`python3-opencv` on Raspberry Pi OS ships OpenCV 4.6.0 with `cv2.FaceDetectorYN`.
+The pinned `opencv-python-headless` wheel in `requirements-faces.txt` is for
+desktop development and test runs; desktop tests alone do not establish Pi
+runtime compatibility, so confirm the distro package on the Pi before relying on
+it there.
+
+Detections run on a bounded-resolution, EXIF-transposed copy of each photo and
+return confidence-filtered boxes normalized to the full orientation-corrected
+image. The cache contract:
+
+- A row is keyed by the catalog id where one exists, or by a `path:`-prefixed
+  hash of the canonical path for legacy folder-album items. Existing
+  `folders.json` and `catalog.json` are only read, never rewritten.
+- Each row stores the photo's source-bytes SHA-256 and the detector signature
+  (model hash, preprocessing bounds, score/NMS thresholds, top-k). Replacing a
+  photo even with preserved timestamps, moving it, upgrading the model, or
+  changing a threshold invalidates the entry instead of serving stale boxes.
+- An empty result is stored as a real row (`empty = 1`), so a face-less photo is
+  not confused with a not-yet-computed miss. Failed reads are never cached and
+  stay retryable; a photo that changes during detection is not committed.
+- Source bytes are re-hashed before and after detection, so content changes are
+  caught without trusting stat metadata. The source is read twice for hashing in
+  addition to the decode.
+- Detection and cache plumbing are this milestone's contract only. Background
+  preprocessing, UI enablement, and face-centered zoom are later milestones.
+
+Test fixtures live in `tests/fixtures/faces/`; their provenance and licenses are
+documented there. The acceptance tests run real YuNet inference and are skipped
+automatically until the model is downloaded and pinned.
+
 ## Validation
 
 ```sh
 cd /home/roman/photo-library
 python3 -m unittest discover -v
+python3 -m ruff check face_detector.py face_cache.py test_faces.py test_face_cache.py
+python3 -m ruff format --check face_detector.py face_cache.py test_faces.py test_face_cache.py
 ```
 
-Tests cover truncated images, exact and pixel duplicates, date conflicts, manual year overrides, and preservation of originals. Live checks also exercise the Pi player commands and the local review HTTP endpoints.
+Tests cover truncated images, exact and pixel duplicates, date conflicts, manual year overrides, preservation of originals, and the face cache and detector contract. Live checks also exercise the Pi player commands and the local review HTTP endpoints.

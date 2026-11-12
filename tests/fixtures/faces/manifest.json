@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "fixtures": [
+    {
+      "file": "single.jpg",
+      "title": "Official NASA portrait (single forward-facing subject)",
+      "source_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Buzz_Aldrin.jpg",
+      "license": "Public domain (NASA / United States government work)",
+      "attribution": "NASA, via Wikimedia Commons",
+      "sha256": "",
+      "expected": {
+        "min_faces": 1,
+        "max_faces": 1
+      }
+    },
+    {
+      "file": "group.jpg",
+      "title": "Official NASA crew portrait (multiple forward-facing subjects)",
+      "source_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Apollo_11_crew.jpg",
+      "license": "Public domain (NASA / United States government work)",
+      "attribution": "NASA, via Wikimedia Commons",
+      "sha256": "",
+      "expected": {
+        "min_faces": 3
+      }
+    }
+  ]
+}
