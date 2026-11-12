@@ -1,17 +1,16 @@
-#!/usr/bin/env python3
 """Local review UI. Access remotely through an SSH tunnel; no cloud uploads."""
 import argparse
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
-from pathlib import Path
 import re
 import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import urlsplit
 
+import face_settings
 from catalog import atomic_json, build
 from folders import add_folder, choose_folder, summaries
 from player import request
-import face_settings
 
 BASE = Path(__file__).resolve().parent
 STATIC = BASE / "static" / "review"
@@ -190,7 +189,7 @@ def make_server(data, port, library=None):
                         raise ValueError("Invalid command")
                     return self.respond(request(body))
                 return self.respond({"error": "Not found"}, status=404)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 return self.respond({"error": str(exc)}, status=400)
 
         def save_settings(self, body):

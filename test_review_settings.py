@@ -203,9 +203,7 @@ class ReviewHttpTests(unittest.TestCase):
         self.assertEqual(status, 400)
 
     def test_player_failure_reported_and_settings_still_saved(self):
-        with mock.patch(
-            "review.request", side_effect=OSError("connection refused")
-        ):
+        with mock.patch("review.request", side_effect=OSError("connection refused")):
             status, data = self.json(
                 "POST",
                 "/api/settings",
@@ -227,9 +225,7 @@ class ReviewHttpTests(unittest.TestCase):
         self.assertEqual(status, 403)
         self.assertIn("error", data)
 
-        status, data = self.json(
-            "GET", "/api/settings", headers={"Host": "127.0.0.1"}
-        )
+        status, data = self.json("GET", "/api/settings", headers={"Host": "127.0.0.1"})
         self.assertEqual(status, 403)
 
         status, data = self.json(

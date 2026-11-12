@@ -28,13 +28,13 @@ def settings_path(data):
 def validate(value):
     """Return a normalized ``{"enabled", "zoom_percent"}`` dict or raise ValueError."""
     if not isinstance(value, dict):
-        raise ValueError("settings must be a JSON object")
+        raise ValueError("settings must be a JSON object")  # noqa: TRY004
     enabled = value.get("enabled", DEFAULTS["enabled"])
     zoom = value.get("zoom_percent", DEFAULTS["zoom_percent"])
     if not isinstance(enabled, bool):
-        raise ValueError("enabled must be true or false")
+        raise ValueError("enabled must be true or false")  # noqa: TRY004
     if isinstance(zoom, bool) or not isinstance(zoom, (int, float)):
-        raise ValueError("zoom_percent must be a number")
+        raise ValueError("zoom_percent must be a number")  # noqa: TRY004
     if not math.isfinite(zoom):
         raise ValueError("zoom_percent must be a finite number")
     if not MIN_ZOOM <= zoom <= MAX_ZOOM:

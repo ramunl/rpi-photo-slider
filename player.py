@@ -13,10 +13,9 @@ from pathlib import Path
 
 import face_settings
 from face_framing import fit_photo
+from face_worker import ProcessWorker
 from folders import playlist as folder_playlist
 from folders import summaries as folder_summaries
-
-from face_worker import ProcessWorker
 from playback import Playback
 
 __all__ = ["fit_photo", "main", "pan_after_drag", "request", "serve"]
