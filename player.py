@@ -16,9 +16,10 @@ from face_framing import fit_photo
 from folders import playlist as folder_playlist
 from folders import summaries as folder_summaries
 
-__all__ = ["fit_photo", "main", "pan_after_drag", "request", "serve"]
 from face_worker import ProcessWorker
 from playback import Playback
+
+__all__ = ["fit_photo", "main", "pan_after_drag", "request", "serve"]
 
 LOG = logging.getLogger(__name__)
 

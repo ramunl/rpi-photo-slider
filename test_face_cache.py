@@ -23,6 +23,7 @@ class FaceCacheTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         self.data = self.root / 'data'
+        self.data.mkdir()
         self.photo_path = self.root / 'photo.jpg'
         self.photo_path.write_bytes(b'first bytes')
         self.photo = {'path': str(self.photo_path)}
