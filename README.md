@@ -267,8 +267,14 @@ automatically until the model is downloaded and pinned.
 ```sh
 cd /home/roman/photo-library
 python3 -m unittest discover -v
-python3 -m ruff check face_detector.py face_cache.py test_faces.py test_face_cache.py
-python3 -m ruff format --check face_detector.py face_cache.py test_faces.py test_face_cache.py
+# Use the PR base commit (or your branch's base) here, in Bash.
+BASE_SHA='<base-commit>'
+git diff --name-only --diff-filter=ACMR -z "$BASE_SHA" -- '*.py' > /tmp/changed-python
+mapfile -d '' -t files < /tmp/changed-python
+if ((${#files[@]})); then
+  python3 -m ruff check -- "${files[@]}"
+  python3 -m ruff format --check -- "${files[@]}"
+fi
 ```
 
 Face settings and the review HTTP endpoints are covered by
@@ -283,3 +289,46 @@ npm test
 ```
 
 Tests cover truncated images, exact and pixel duplicates, date conflicts, manual year overrides, preservation of originals, and the face cache and detector contract. Live checks also exercise the Pi player commands and the local review HTTP endpoints.
+
+CI runs unittest discovery and `npm test`. Both Ruff checks cover every added,
+copied, modified, or renamed Python file relative to the PR base SHA or push's
+previous SHA. Checkout includes history; if the base is unavailable (including
+a new branch push), CI checks every tracked Python file. Deleted files are
+excluded. Add new files to Git before running the local diff check above.
+
+### Manual Pi smoke check
+
+Run on the Pi as the desktop/player user, using the distro Python with
+`python3-opencv` installed. Download and pin the model as described above and
+fetch the licensed fixtures. `MODEL_SHA256` is currently empty: model loading
+is **unverified** until the artifact is downloaded and pinned on the Pi.
+`face_detector.py --verify` checks the checksum only; the fixture inference in
+the smoke script also exercises actual OpenCV model loading and `face_frame`.
+
+```sh
+cd /home/roman/photo-library
+python3 tests/fixtures/faces/fetch_fixtures.py
+~/bin/photos start 2010
+python3 smoke.py --viewport 1920 1080 > /tmp/pi-smoke-single.json
+python3 smoke.py --fixture tests/fixtures/faces/group.jpg \
+  --viewport 1920 1080 > /tmp/pi-smoke-group.json
+```
+
+Use the display's actual viewport dimensions and an available album. The script
+does not start or change playback. It records each check's elapsed time, errors,
+status response, detected boxes, zoom and pan, continuing after failures and
+exiting nonzero if any check fails. The status round-trip budget defaults to
+1000 ms (`--status-budget-ms` overrides it); subprocesses time out after 30
+seconds (`--timeout`). A running slideshow is required for a passing status check.
+
+Before merging, attach both JSON reports and record the Pi model, OS version,
+`python3 -c 'import cv2; print(cv2.__version__)'` result, and installed
+`python3-opencv` package version. Confirm real inference succeeds with that
+distro build; CI does not establish Pi OpenCV compatibility. With face detection
+enabled in the review page, record cold/warm playback observations: next,
+previous, pause and resume remain responsive during preparation, single/group
+faces remain visible, and manual zoom/reset still works. Repeat the status
+measurement during cold preparation. The numeric crop check and a single status
+sample do not replace these display/control observations. Missing model,
+fixtures, hardware results, or distro compatibility evidence remain unverified,
+even if the local and CI suites pass.
