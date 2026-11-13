@@ -128,6 +128,8 @@ class PlaybackTests(unittest.TestCase):
         self.assertFalse(self.worker.jobs[-1]["enabled"])
         self.display()
         self.assertEqual(self.frames[-1][2]["zoom"], 1)
+        self.assertEqual(self.frames[-1][2]["face_status"], "unavailable")
+        self.assertEqual(self.frames[-1][2]["error"], "timeout")
         self.worker.release(late)
         self.player.tick()
         self.assertEqual(len(self.frames), 1)

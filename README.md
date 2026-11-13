@@ -220,6 +220,14 @@ as needed to retain every face. Manual zoom/reset remains persistent across
 photos and albums and takes precedence over automatic framing; effective
 automatic zoom does not change the manual zoom setting.
 
+The slideshow caption shows **Faces: N** immediately after the photo index.
+Zero means detection completed with no faces. **off** means detection is disabled,
+**manual** means persistent manual zoom/reset overrides automatic framing, and
+**unavailable** means detection or photo preparation failed. `photos status`
+includes `face_count`, `face_status`, and `face_error` for the displayed photo;
+use the error to distinguish missing model/dependencies from worker timeouts.
+These diagnostics update together with the photo, including prefetched frames.
+
 Milestone 3 adds persistent, validated settings and the review-page controls.
 The review page has labeled **Detect faces** and **Zoom increase** controls;
 disabling face detection disables the zoom input without discarding its value.

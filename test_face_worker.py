@@ -52,11 +52,30 @@ class WorkerTests(unittest.TestCase):
             first = prepare(self.temp.name, self.job)
             second = prepare(self.temp.name, self.job)
         self.assertEqual(detect.call_count, 1)
+        self.assertEqual(first["face_count"], 1)
+        self.assertEqual(second["face_count"], 1)
+        self.assertEqual(first["face_status"], "detected")
         self.assertEqual(first["zoom"], 1.4)
         self.assertEqual(first["pan"], second["pan"])
         with patch("face_worker.FaceCache", side_effect=AssertionError("cache opened")):
             result = prepare(self.temp.name, dict(self.job, enabled=False))
+        self.assertIsNone(result["face_count"])
+        self.assertEqual(result["face_status"], "off")
         self.assertEqual(result["zoom"], 1)
+
+    def test_empty_detection_is_zero_not_unavailable(self) -> None:
+        with patch(
+            "face_detector.detect",
+            return_value={"width": 100, "height": 60, "faces": []},
+        ):
+            result = prepare(self.temp.name, self.job)
+        self.assertEqual(result["face_count"], 0)
+        self.assertEqual(result["face_status"], "detected")
+
+    def test_manual_override_is_visible(self) -> None:
+        result = prepare(self.temp.name, dict(self.job, enabled=False, manual=True))
+        self.assertIsNone(result["face_count"])
+        self.assertEqual(result["face_status"], "manual")
 
     def test_exif_and_normalized_edge_framing(self):
         exif = Image.Exif()
@@ -78,6 +97,8 @@ class WorkerTests(unittest.TestCase):
             result = prepare(self.temp.name, self.job)
         self.assertEqual(result["zoom"], 1)
         self.assertEqual(result["error"], "no model")
+        self.assertIsNone(result["face_count"])
+        self.assertEqual(result["face_status"], "unavailable")
 
     def test_process_transfers_bounded_pixels_and_closes(self):
         worker = ProcessWorker(self.temp.name)

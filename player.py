@@ -29,6 +29,23 @@ SOCKET = (
 )
 
 
+def _photo_caption(state: dict, zoom: float) -> str:
+    """Describe detection for the displayed photo, including skipped work."""
+    faces = (
+        str(state["face_count"])
+        if state["face_status"] == "detected"
+        else state["face_status"]
+    )
+    caption = (
+        f"{state['year']}   {state['index'] + 1} / {state['count']}   Faces: {faces}"
+    )
+    if state["paused"]:
+        caption += "   Paused"
+    if zoom != 1:
+        caption += f"   Zoom {zoom:.0%}"
+    return caption
+
+
 def pan_after_drag(image_size, viewport, zoom, pan, delta):
     """Normalized crop offsets; drag moves the photo with the pointer."""
     scale = min(viewport[0] / image_size[0], viewport[1] / image_size[1]) * zoom
@@ -76,6 +93,9 @@ def serve(data):
         "index": 0,
         "count": 0,
         "path": None,
+        "face_count": None,
+        "face_status": "off",
+        "face_error": None,
         "zoom": 1.0,
         "pan_x": 0.0,
         "pan_y": 0.0,
@@ -102,7 +122,14 @@ def serve(data):
         nonlocal current, rendered, drag
         drag = None
         playback.stop()
-        state.update(playing=False, paused=False, path=None)
+        state.update(
+            playing=False,
+            paused=False,
+            path=None,
+            face_count=None,
+            face_status="off",
+            face_error=None,
+        )
         current = rendered = None
         canvas.delete("all")
         root.withdraw()
@@ -117,15 +144,22 @@ def serve(data):
         rendered = tk.PhotoImage(data=ppm, format="PPM")
         canvas.delete("all")
         canvas.create_image(w // 2, h // 2, image=rendered)
-        caption = f"{state['year']}   {state['index'] + 1} / {state['count']}" + (
-            "   Paused" if state["paused"] else ""
-        )
-        if effective_zoom != 1:
-            caption += f"   Zoom {effective_zoom:.0%}"
-        canvas.create_rectangle(14, h - 46, 270, h - 12, fill="#101418", outline="")
-        canvas.create_text(
+        caption = _photo_caption(state, effective_zoom)
+        label = canvas.create_text(
             25, h - 29, text=caption, fill="white", anchor="w", font=("Sans", 14)
         )
+        bounds = canvas.bbox(label)
+        if bounds:
+            left, top, right, bottom = bounds
+            background = canvas.create_rectangle(
+                left - 11,
+                top - 5,
+                right + 11,
+                bottom + 5,
+                fill="#101418",
+                outline="",
+            )
+            canvas.tag_lower(background, label)
 
     effective_zoom = 1.0
     image_size = (1, 1)
@@ -138,6 +172,9 @@ def serve(data):
         state.update(
             index=index,
             path=row["path"],
+            face_count=result["face_count"],
+            face_status=result["face_status"],
+            face_error=result.get("error"),
             pan_x=result["pan"][0],
             pan_y=result["pan"][1],
         )
@@ -487,9 +524,7 @@ def main():
                     message["enabled"] = args.enabled
                 if args.zoom is not None:
                     message["zoom_percent"] = args.zoom
-            print(
-                json.dumps(request(message), ensure_ascii=False, indent=2)
-            )
+            print(json.dumps(request(message), ensure_ascii=False, indent=2))
     except (OSError, RuntimeError) as e:
         p.exit(
             1,

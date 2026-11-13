@@ -44,6 +44,7 @@ class Playback:
         self.skipped = 0
         self.order = []
         self.display_fallback = False
+        self._fallback_error = None
 
     def start(self, photos, seconds=8):
         self.stop()
@@ -98,6 +99,8 @@ class Playback:
     def request(self, index, reset_pan=True, fallback=False):
         if not self.photos:
             return
+        if not fallback:
+            self._fallback_error = None
         self.worker.cancel()
         self.active = None
         self.serial += 1
@@ -148,6 +151,14 @@ class Playback:
             return False
 
     def _commit(self, result, fallback=False):
+        if fallback:
+            result = dict(
+                result,
+                face_count=None,
+                face_status="unavailable",
+                error=self._fallback_error or "Photo preparation failed",
+            )
+        self._fallback_error = result.get("error")
         self.display_fallback = fallback or bool(result.get("error"))
         self.pending = None
         self.skipped = 0
@@ -168,6 +179,7 @@ class Playback:
                     self._commit(result, fallback=fallback)
                 elif not fallback:
                     LOG.warning("Using ordinary framing after failed preparation")
+                    self._fallback_error = result.get("fatal", "Source changed")
                     self._submit(index, "display", fallback=True)
                 else:
                     LOG.warning("Skipping photo after bounded preparation failure")
