@@ -25,15 +25,20 @@ def prepare(data, job):
     before = source_stamp(photo["path"])
     faces = []
     error = None
+    face_count = None
+    face_status = "manual" if job["manual"] else "off"
     if job["enabled"]:
         try:
             with FaceCache(data) as cache:
                 result, _ = cache.faces(photo)
                 faces = result["faces"]
+                face_count = len(faces)
+                face_status = "detected"
         except SourceChangedError:
             raise
         except Exception as exc:  # noqa: BLE001 - isolate optional detector/job failures
             error = str(exc)
+            face_status = "unavailable"
     if job.get("cache_only"):
         return {"error": error, "stamp": before}
     with Image.open(photo["path"]) as source:
@@ -45,6 +50,8 @@ def prepare(data, job):
     if source_stamp(photo["path"]) != before:
         raise SourceChangedError("source changed during preparation")
     return {
+        "face_count": face_count,
+        "face_status": face_status,
         "image": fitted,
         "size": image.size,
         "zoom": zoom,
