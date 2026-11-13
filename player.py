@@ -171,6 +171,7 @@ def serve(data):
         effective_zoom = result["zoom"]
         state.update(
             index=index,
+            zoom=effective_zoom,
             path=row["path"],
             face_count=result["face_count"],
             face_status=result["face_status"],

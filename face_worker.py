@@ -2,6 +2,7 @@
 
 import logging
 import multiprocessing
+import os
 import queue
 import time
 from multiprocessing import shared_memory
@@ -62,6 +63,14 @@ def prepare(data, job):
 
 
 def _run(data, jobs, results):
+    # Leave CPU capacity for the desktop, audio and photo navigation.
+    if hasattr(os, "nice"):
+        os.nice(10)
+    try:
+        import cv2
+        cv2.setNumThreads(1)
+    except ImportError:
+        pass  # The detector reports the optional missing dependency per job.
     while True:
         job = jobs.get()
         if job is None:

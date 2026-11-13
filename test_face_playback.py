@@ -134,6 +134,16 @@ class PlaybackTests(unittest.TestCase):
         self.player.tick()
         self.assertEqual(len(self.frames), 1)
 
+    def test_saving_face_settings_replaces_manual_zoom(self):
+        self.player.start(self.photos)
+        self.player.manual_frame(2, (0.5, 0.3))
+        self.player.settings(enabled=True, zoom_percent=300)
+        job = self.worker.jobs[-1]
+        self.assertTrue(job["enabled"])
+        self.assertFalse(job["manual"])
+        self.assertEqual(job["percent"], 300)
+        self.assertEqual(job["pan"], (0, 0))
+
     def test_fallback_stays_ordinary_after_resize(self):
         self.player.enabled = True
         self.player.start(self.photos)

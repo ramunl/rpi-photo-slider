@@ -64,6 +64,9 @@ class Playback:
         self.deadline = float("inf")
 
     def settings(self, enabled=None, zoom_percent=None):
+        # Saving automatic framing explicitly replaces any manual zoom/pan.
+        self.manual = False
+        self.zoom, self.pan = 1.0, (0.0, 0.0)
         if enabled is not None:
             self.enabled = bool(enabled)
         if zoom_percent is not None:
